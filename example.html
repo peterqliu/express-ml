@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ExpressML example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css' />
+    <script src='https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js'></script>
+    <script src="./index.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    
+    // instantiate ExpressML object and a map
+    const em = new ExpressML(maplibregl);
+
+    const map = em
+        .Map({
+            container: 'map', // container id
+            style: 'https://demotiles.maplibre.org/style.json', // style URL
+            center: [0, 0], // starting position [lng, lat]
+            zoom: 1 // starting zoom
+        });
+
+
+    // adding layers and sources. handles async load event under the hood
+    
+    map
+        // add layer, with geojson source via url
+        .addCircle(
+            'points', 
+            {geojson: 'https://gist.githubusercontent.com/peterqliu/a4ece2b3f91336145cab9a8e7dccfa5f/raw/6e18e3d94d2ac7cb10a72a8de43ba7c4f48a8e00/points.geojson'}
+        )
+
+        // add a new layer, referring to previous layer as source.
+        // commingle layout, paint, source, and root-level layer properties
+
+        .addText(
+            'point-labels',
+            {
+                source: 'points',
+                maxzoom: 12,
+                field: 'this is a point', 
+                anchor: 'left',
+                'halo-width': 2,
+                'halo-color': 'white',
+                placement: 'point',
+                translate: [15,0], 
+            }
+        )
+
+        // add a layer with no source. it will use an empty geojson as a placeholder.
+        // as with vanilla .addLayer(), takes an optional third parameter for insertion position
+        .addLine(
+            'world-borders', 
+            {color: 'blue'},
+            'point-labels'
+        )
+
+        // update previous layer with data from geojson url
+        .setSourceData(
+            'world-borders', 
+            'https://gist.githubusercontent.com/peterqliu/7b8340fe1a8de311f900cfc9368d7820/raw/f9be805a6577272a37088974b062b209fbc26907/world.geojson'
+        )
+    
+
+
+</script>
+</body>
+</html>
