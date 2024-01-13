@@ -8,10 +8,14 @@ class ExpressML {
 
     Map(options) {
 
+        const style = this.#blankStyle;
+
         class ExpressMLMap extends this.library.Map {
 
             constructor(o) {
-                super(o);
+
+                // use blank style as default
+                super({style, ...o});
             }
             
             // data structure of a layer object
@@ -251,4 +255,15 @@ class ExpressML {
 
         return new ExpressMLMap(options)
     } 
+
+    #blankStyle = {
+        "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+        "layers": [],
+        "sources": {
+    
+        },
+        "version": 8
+    }
 }
+
+var test = {foo:true}

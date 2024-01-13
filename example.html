@@ -18,10 +18,10 @@
     // instantiate ExpressML object and a map
     const em = new ExpressML(maplibregl);
 
+    // style parameter optional -- uses a blank style by default
     const map = em
         .Map({
             container: 'map', // container id
-            style: 'https://demotiles.maplibre.org/style.json', // style URL
             center: [0, 0], // starting position [lng, lat]
             zoom: 1 // starting zoom
         });
