@@ -30,10 +30,22 @@
     // adding layers and sources. handles async load event under the hood
     
     map
+        // add a layer with no source. it will use an empty geojson as a placeholder.
+        // bind a click handler that'll fire once populated with source data
+        .addFill(
+            'world-borders', 
+            {
+                color: '#abcdef',
+                'outline-color': 'white',
+                onClick: ft =>alert(ft.properties.name)
+            }
+        )
         // add layer, with geojson source via url
         .addCircle(
             'points', 
-            {geojson: 'https://gist.githubusercontent.com/peterqliu/a4ece2b3f91336145cab9a8e7dccfa5f/raw/6e18e3d94d2ac7cb10a72a8de43ba7c4f48a8e00/points.geojson'}
+            {
+                geojson: 'https://gist.githubusercontent.com/peterqliu/a4ece2b3f91336145cab9a8e7dccfa5f/raw/6e18e3d94d2ac7cb10a72a8de43ba7c4f48a8e00/points.geojson',
+            }
         )
 
         // add a new layer, referring to previous layer as source.
@@ -49,19 +61,11 @@
                 'halo-width': 2,
                 'halo-color': 'white',
                 placement: 'point',
-                translate: [15,0], 
+                translate: [15,0]
             }
         )
-
-        // add a layer with no source. it will use an empty geojson as a placeholder.
-        // as with vanilla .addLayer(), takes an optional third parameter for insertion position
-        .addLine(
-            'world-borders', 
-            {color: 'blue'},
-            'point-labels'
-        )
-
-        // update previous layer with data from geojson url
+        
+        // update our first layer with data from geojson url
         .setSourceData(
             'world-borders', 
             'https://gist.githubusercontent.com/peterqliu/7b8340fe1a8de311f900cfc9368d7820/raw/f9be805a6577272a37088974b062b209fbc26907/world.geojson'
