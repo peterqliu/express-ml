@@ -13,23 +13,21 @@ class ExpressML {
         class ExpressMLMap extends this.library.Map {
 
             constructor(o) {
-
                 // use blank style as default
                 super({style, ...o});
             }
-            
+
             // data structure of a layer object
             #propType = {
 
                 root: ['minzoom', 'maxzoom', 'source', 'source-layer', 'filter'],
 
                 // custom source properties to be bundled into source object
-                source: ['geojson', 'vector'],
+                source: new Set(['geojson', 'vector']),
 
                 // any layer using these props make them layout props
                 layout: [
                     'cap', 'join', 'miter', 'round-limit', 'sort', //lines
-                    // 'allow-overlap', 'anchor', 'field', 'font', 
                     'visibility'
                 ],
             
@@ -39,12 +37,25 @@ class ExpressML {
                     'color', 'opacity', 'halo', 'translate'
                 ],
 
-                symbolLayers:['text', 'icon'],
+                symbolLayers: new Set(['text', 'icon']),
 
                 // props containing these strings need a `symbol-` prefix,
                 // even if they are added as text layers
-                obligateSymbolPrefixes: ['placement', 'sort-key', 'avoid-edges', 'spacing', 'z-order']
-            }
+                obligateSymbolPrefixes: new Set(['placement', 'sort-key', 'avoid-edges', 'spacing', 'z-order']),
+
+
+                mouseEvents: new Set([                
+                    'click',
+                    'mousedown',
+                    'mouseup',
+                    'mouseenter',
+                    'mouseleave',
+                    'mouseup',
+                    'mousemove',
+                    'mouseout',
+                    'dblclick',
+                    'contextmenu'])
+                }
 
             // trigger function if map is loaded, or
             // on load event if it's not yet loaded.
@@ -101,40 +112,34 @@ class ExpressML {
                 return this.#addGenericLayer('fill', id, style, after)
             }
 
-            addSymbol(id, layout, paint, after) {
-
-                const isVTSource = layout['source-layer'];
-                return this.#whenLoaded(()=>this.addLayer({
-                    id,
-                    type: 'symbol',
-                    source: this._formatSource(data, isVTSource),
-                    layout,
-                    paint
-                }, after))
-
-            }
-
             addText(id, style, after) {
 
-                    const isVTSource = style['source-layer'];
-                    return this.#whenLoaded(()=>this.addLayer({
+                return this.#whenLoaded(()=>{
+                    this.addLayer({
                         id,
                         type: 'symbol',
                         ...this.#formatStyle(style, 'text')
-                    }, after))
+                    }, after)
+                    this.#bindLayerEvents(id, style);
+
+                })
 
             }
 
             addIcon(id, style, after) {
 
-                const isVTSource = style['source-layer'];
-                return this.#whenLoaded(()=>this.addLayer({
-                    id,
-                    type: 'symbol',
-                    ...this.#formatStyle(style, 'icon')
-                }, after))
+                return this.#whenLoaded(()=>{
+                    this.addLayer({
+                        id,
+                        type: 'symbol',
+                        ...this.#formatStyle(style, 'icon')
+                    }, after)
+                    this.#bindLayerEvents(id, style);
+
+                })
 
             }
+            
             remove(id) {
                 if (this.getLayer(id)) this.removeLayer(id)
                 else console.error(`.remove(): Map has no layer named "${id}"`)
@@ -144,11 +149,17 @@ class ExpressML {
 
                 const isVTSource = style?.['source-layer'];
 
-                return this.#whenLoaded(()=>this.addLayer({
-                    id,
-                    type,
-                    ...this.#formatStyle(style, type)
-                }, after))
+                return this.#whenLoaded(()=>{
+
+                    const layerProps = this.#formatStyle(style, type);
+                    this.addLayer({
+                        id,
+                        type,
+                        ...layerProps
+                    }, after)
+
+                    this.#bindLayerEvents(id, style);
+                })
             }
 
             
@@ -180,14 +191,23 @@ class ExpressML {
 
             // given a layer type and a property, determine whether it's a
             // paint, layout, source, or root-level property
+
             #resolvePropType(layerType, prop) {
 
-                const {root, source, layout, symbolPaints} = this.#propType
+                const {root, source, layout, symbolPaints, mouseEvents} = this.#propType;
 
                 // identify root props
                 if (root.find(substring=>prop.includes(substring))) return 'root'
 
-                if (source.includes(prop)) return 'source'
+                // mouseevent
+                if (prop.indexOf('on') === 0) {
+                    if (mouseEvents.has(prop.replace('on','').toLowerCase())) return 'mouseevent'
+                    return undefined
+                }
+
+                // source prop
+                if (source.has(prop)) return 'source'
+                
                 const isSymbolLayer = ('textsymbolicon')
                     .includes(layerType);    
 
@@ -209,9 +229,21 @@ class ExpressML {
 
             }
 
+            #bindLayerEvents(id, style) {
+
+                const eventProps = Object.keys(style)
+                    .filter(k=>k.indexOf('on')===0);
+
+                eventProps.forEach(prop=>{
+                    const event = prop.replace('on','').toLowerCase();
+                    this.on(event, id, (e)=>style[prop](e.features[0], e))
+                })
+            }
+
+
             #formatStyle(obj, layerType) {
 
-                const formattedStyle = {
+                let formattedStyle = {
                     source: {
                         type: 'geojson',
                         data: {type: 'FeatureCollection', features: []}
@@ -222,7 +254,6 @@ class ExpressML {
 
                 if (!obj) return formattedStyle
 
-                const {obligateSymbolPrefixes, symbolLayers} = this.#propType;
                 
                 // iterate through input properties, append their layer prefixes,
                 // and arrange them in the root, or source/layout/paint objects
@@ -230,22 +261,40 @@ class ExpressML {
                     .forEach(([property,value]) => {
 
                         const propType = this.#resolvePropType(layerType, property);
-                        if (!propType) console.error(`Unknown property "${property}"`)
 
-                        let prefixedProperty = `${layerType}-${property}`;
-                        if (symbolLayers.includes(layerType) && obligateSymbolPrefixes.includes(property)) prefixedProperty = `symbol-${property}`;
+                        switch (propType) {
 
-                        // handle source parameters (geojson or vector)
-                        if (propType === 'source') formattedStyle.source = {
-                            type: property,
-                            data: value
+                            case 'root': 
+                                formattedStyle[property] = value;
+                                break;
+                            
+                            case 'source':
+                                formattedStyle.source = {
+                                    type: property,
+                                    data: value
+                                };
+                                break;
+
+                            case 'layout':
+                            case 'paint':
+
+                                const {obligateSymbolPrefixes, symbolLayers} = this.#propType;
+
+                                // apply prefix to property. also handle edge cases where symbol
+                                let prefixedProperty = [layerType, property].join('-');
+                                if (symbolLayers.has(layerType) && obligateSymbolPrefixes.has(property)) prefixedProperty = `symbol-${property}`;
+
+                                else formattedStyle[propType][prefixedProperty] = value;
+                                break;
+
+                            // mouseevents won't apply in the layer object
+                            case 'mouseevent': break;
+
+                            default: console.error(`Unknown property "${property}"`)
+
                         }
 
-                        // apply root properties
-                        else if (propType === 'root') formattedStyle[property] = value;
 
-                        // apply layout/paint properties
-                        else formattedStyle[propType][prefixedProperty] = value;
                     })
 
                 return formattedStyle

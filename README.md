@@ -1,4 +1,4 @@
-## express-ml
+# express-ml
 
 A library of convenience methods for MapLibre GL. 
 
@@ -6,7 +6,7 @@ A library of convenience methods for MapLibre GL.
 - Add layers and sources regardless of asynchronous load events
 - Add layers without source data at all (will default to an empty geojson source)
 
-### Usage
+## Usage
 
 ```
 const map = new ExpressML(library)
@@ -20,9 +20,9 @@ Instantiates a new map object.
 
 Returns an instance of `ExpressMLMap`, with all the features of `maplibregl.Map` plus the following.
 
-### `ExpressMLMap` API
+## `ExpressMLMap` API
 
-#### `.add{Circle|Line|Fill|Text|Icon|Background}(id[, options, after])`
+### `.add{Circle|Line|Fill|Text|Icon|Background}(id[, options, after])`
 
 Add layer of the corresponding type, on map load (if not already loaded). 
 
@@ -36,7 +36,8 @@ Sources: one of the following. If none, uses an empty geojson source by default.
 
 most other params of `map.addLayer()` can be added similarly, without nesting into source/layout/paint sub-objects. 
 
-Symbol layers have an added wrinkle of offering text and/or icons. In layers with just one of these, `addText` and `addIcon` are convenience methods to add the obligatory symbol layer, while handling text- and icon- prefixes, respectively. To add symbol layers with both text and icons, use the vanilla `map.addLayer()` method.
+Symbol layers have an added wrinkle of offering text and/or icons. In layers with just one of these, `addText` and `addIcon` are convenience methods to add the obligatory symbol layer while handling text- and icon- prefixes, respectively. To add symbol layers with both text and icons, use the vanilla `map.addLayer()` method.
+
 
 
 For example, these two operations are equivalent:
@@ -79,11 +80,31 @@ map.addText(
 
 see `example.html` for more usage examples.
 
-#### `.remove(id)`
+Mouse events: 
+Events on layers can also be added to the options object.
+
+`on{Click|Mouseover|Mouseout|Mouseenter|MouseLeave|Mouseup|Mousemove|Dblclick|Contextmenu}(fn(firstFeature, event))`
+
+Add a mouse event handler to the layer. The callback function receives two arguments: the first feature returned, and the mouse event object. To illustrate, these are equivalent
+
+```
+    {
+        ...,
+        onClick: (firstElement, event) => {console.log(firstElement, event)}
+    }
+```
+
+```
+    map.on('click', {layerName}, e=>{
+        console.log(e.features[0], e)
+    }), 
+```
+
+### `.remove(id)`
 
 Remove a layer.
 `id`: string. ID of layer to remove
 
-#### `.setSourceData(id, data)`
+### `.setSourceData(id, data)`
 
 Shorthand for `map.getSource(id).setData(data)`. GeoJSON sources only.
