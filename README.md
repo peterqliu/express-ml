@@ -1,10 +1,9 @@
 # express-ml
 
-A library of convenience methods for MapLibre GL. 
+A library of convenience methods for MapLibre GL. Greatly simplifies working with layers at runtime.
 
-- Add layers concisely, taking layer properties (source, filter, paint, layout, minzoom, etc) in a shallow object, with no prefixes for layout and paint props.
-- Add layers and sources regardless of asynchronous load events
-- Add layers without source data at all (will default to an empty geojson source)
+    - Specify all layer properties (source, filter, paint, layout, minzoom, etc) and mouse events in a single shallow object. No
+    - Add layers without source data, or regard for asynchronous load events
 
 ## Usage
 
@@ -22,11 +21,14 @@ Returns an instance of `ExpressMLMap`, with all the features of `maplibregl.Map`
 
 ## `ExpressMLMap` API
 
-### `.add{Circle|Line|Fill|Text|Icon|Background}(id[, options, after])`
+### `.add{layerType}(id[, options, after])`
 
 Add layer of the corresponding type, on map load (if not already loaded). 
 
+`layerType`: one of `Circle`, `Line`, `Fill`, `Text`, `Icon`, `Background`. Text and Icon are actually symbol layers, but handy when needing just one or the other. To add symbol layers with both text and icons, use the vanilla `map.addLayer()` method.
+
 `id`: string. name of layer
+
 `options` (optional): a shallow object of all layer properties (except id). All parameters optional.
 
 Sources: one of the following. If none, uses an empty geojson source by default.
@@ -35,9 +37,6 @@ Sources: one of the following. If none, uses an empty geojson source by default.
 `vector` + `source-layer`: string. vector tile source, plus source layer.
 
 most other params of `map.addLayer()` can be added similarly, without nesting into source/layout/paint sub-objects. 
-
-Symbol layers have an added wrinkle of offering text and/or icons. In layers with just one of these, `addText` and `addIcon` are convenience methods to add the obligatory symbol layer while handling text- and icon- prefixes, respectively. To add symbol layers with both text and icons, use the vanilla `map.addLayer()` method.
-
 
 
 For example, these two operations are equivalent:
@@ -60,6 +59,7 @@ map.on('load', () => {
             'text-color': 'blue'
         }
     })
+    .on('click', 'name', e => console.log(e.features[0]))
 })
 
 ```
@@ -70,10 +70,11 @@ map.addText(
     'name', 
     {
         geojson: 'https://www.example.com/data.geojson',    // put geojson source directly in object
-        field: 'label',                                     // "{layer}-" prefixes handled automatically
-        placement: 'line',                                  // ...including "symbol-" prefixes, when adding text
-        minzoom: 12,                                        // root-level layer property
+        field: 'label',                                     // infers the "text-" prefix automatically, from layer type
+        placement: 'line',                                  // ...while also handling obligatory "symbol-" prefixes
+        minzoom: 12,                                        // accepts root-level layer properties
         color: 'blue'                                       // paint properties too 
+        onClick: ft => console.log(ft)                      // plus mouse events
     }
 )
 ```
